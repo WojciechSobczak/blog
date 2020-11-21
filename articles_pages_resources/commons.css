@@ -1,0 +1,13 @@
+.article-interactive-panel {
+    margin: 5px;
+    padding: 10px;
+    box-shadow: 0 0 3px #ccc;
+    overflow: auto;
+}
+
+.article-interactive-input {
+    padding: 3px;
+    color: #666;
+    border: 1px solid #e8e8e8;
+    border-radius: 3px;
+}
