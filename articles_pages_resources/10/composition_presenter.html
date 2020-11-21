@@ -1,0 +1,116 @@
+<style>
+.composition-window-style {
+    margin: 5px;
+    padding: 10px;
+    box-shadow: 0 0 3px #ccc;
+    overflow: auto;
+}
+
+.composition-window-style >button {
+    padding: 2px;
+}
+</style>
+<div class="composition-window-style">
+    <script src="/blogapi/file/interactivities/wsset.js" type="text/javascript"></script>
+    <div id="composition-window">
+        <div id="composition-inputs">
+            <div>
+                <h5>Wpisz elementy zbiorów po przecinku, np: 1, 2, 3, 4</h5>
+            </div>
+            <span>
+                <label> 
+                    A: <input id="a-set" type="text">
+                </label>
+                <label>
+                    B: <input id="b-set" type="text">
+                </label>
+                <label>
+                    C: <input id="c-set" type="text">
+                </label>
+                <label>
+                    D: <input id="d-set" type="text">
+                </label>
+            </span>
+        </div>
+        <div id="composition-buttons">
+            <button style="btn" onclick="calculateComposition()">Przelicz</button>
+        </div>
+
+        <div>
+            <h5>Wynik:</h5>
+        </div>
+        <div id="composition-result">
+        </div>
+    </div>
+</div>
+
+<script>
+    function parseInput(input, letter) {
+        let output = new WSSet();
+        if (input == null || input.trim().length == 0) {
+            throw "Nie podano elementów dla zbioru: " + letter;
+        }
+        let splitted = input.split(',');
+        splitted.forEach(elem => {
+            if (elem != null && elem.trim().length > 0) {
+                output.addElement(elem.trim());
+            }
+        });
+        return output;
+    }
+
+    function getSetSingleElementsString(set) {
+        let out = '\\set{';
+        set.forEach(elem => {
+            out += elem + ",";
+        })
+        out = out.substring(0, out.length - 1);
+        return out += '}';
+    }
+
+    function getSetBinaryElementsString(set) {
+        let out = '\\set{';
+        set.forEach(elem => {
+            out += "(" + elem.get(0) + ", " + elem.get(1) +"),";
+        })
+        out = out.substring(0, out.length - 1);
+        return out += '}';
+    }
+
+
+    function calculateComposition() {
+        try {
+            let A = parseInput(document.getElementById('a-set').value, 'A');
+            let B = parseInput(document.getElementById('b-set').value, 'B');
+            let C = parseInput(document.getElementById('c-set').value, 'C');
+            let D = parseInput(document.getElementById('d-set').value, 'D');
+
+            let relationR = new BinaryRelation(A.cartesianProduct(B));
+            let relationS = new BinaryRelation(C.cartesianProduct(D));
+
+            let composition = relationS.composition(relationR);
+
+            let output = `
+                <span class="mine-editor-math-equation">
+                    \\( 
+                        A = ${getSetSingleElementsString(A)} \\\\
+                        B = ${getSetSingleElementsString(B)} \\\\
+                        C = ${getSetSingleElementsString(C)} \\\\
+                        D = ${getSetSingleElementsString(D)} \\\\
+                        \\\\
+                        R = A \\times B = ${getSetBinaryElementsString(relationR)} \\\\
+                        S = C \\times D = ${getSetBinaryElementsString(relationS)} \\\\
+                        \\\\
+                        S \\circ R = ${getSetBinaryElementsString(composition)}
+                    \\) 
+                </span>
+            `;
+
+            let outElem = document.getElementById('composition-result');
+            outElem.innerHTML = output;
+            MathJaxUtils.renderInElements([outElem]);
+        } catch(e) {
+            toastr.error(e);
+        }
+    }
+</script>
