@@ -476,6 +476,7 @@ namespace Backtracking {
             let rowsInput = document.getElementById(this.ROWS_INPUT_ID);
             rowsInput.onchange = function(ev: Event) {
                 _self.getState().stepByStepActionsOpt = null;
+                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
                 let input = ev.target as HTMLInputElement;
                 let rows = parseInt(input.value);
                 if (rows && rows >= _self.MIN_ROW_VALUE) {
@@ -487,6 +488,7 @@ namespace Backtracking {
             let columnsInput = document.getElementById(this.COLUMNS_INPUT_ID);
             columnsInput.onchange = function(ev: Event) {
                 _self.getState().stepByStepActionsOpt = null;
+                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
                 let input = ev.target as HTMLInputElement;
                 let columns = parseInt(input.value);
                 if (columns && columns >= _self.MIN_COLUMNS_VALUE) {
