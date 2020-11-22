@@ -192,6 +192,7 @@ namespace Backtracking {
                     "gui.click.action.finish_set": "Ustaw punkt końcowy",
                     "gui.click.action.obstacle_set": "Ustaw przeszkodę",
                     "gui.click.action.unset_set": "Usuń wszelkie poprzednie ustawienia",
+                    "gui.buttons.actions": "Akcje",
                     "solver.options": "Opcje solvera",
                     "solver.lookup.strategy": "Sposób sprawdzania komórek",
                     "solver.lookup.strategy.all_around": "Sprawdź wszystkie dookoła (8 kierunków)",
@@ -228,6 +229,7 @@ namespace Backtracking {
                     "gui.click.action.finish_set": "Set finish point",
                     "gui.click.action.obstacle_set": "Set obstacle",
                     "gui.click.action.unset_set": "Remove all previously set properties",
+                    "gui.buttons.actions": "Actions",
                     "solver.options": "Solver options",
                     "solver.lookup.strategy": "Strategy of cell checking",
                     "solver.lookup.strategy.all_around": "Check all around (8 directions)",
@@ -392,7 +394,7 @@ namespace Backtracking {
                         </div>
                     </div>
                     <div>
-                    <h3>Actions: </h3>
+                    <h3>${this.getTranslation("gui.buttons.actions")}: </h3>
                         <div>
                             <label>
                                 <button id="${this.FAST_RESOLVE_START_BUTTON_ID}" class="btn">${this.getTranslation("actions.automatic.solve")}</button>
@@ -473,6 +475,7 @@ namespace Backtracking {
             var _self = this;
             let rowsInput = document.getElementById(this.ROWS_INPUT_ID);
             rowsInput.onchange = function(ev: Event) {
+                _self.getState().stepByStepActionsOpt = null;
                 let input = ev.target as HTMLInputElement;
                 let rows = parseInt(input.value);
                 if (rows && rows >= _self.MIN_ROW_VALUE) {
@@ -483,6 +486,7 @@ namespace Backtracking {
     
             let columnsInput = document.getElementById(this.COLUMNS_INPUT_ID);
             columnsInput.onchange = function(ev: Event) {
+                _self.getState().stepByStepActionsOpt = null;
                 let input = ev.target as HTMLInputElement;
                 let columns = parseInt(input.value);
                 if (columns && columns >= _self.MIN_COLUMNS_VALUE) {
@@ -502,6 +506,7 @@ namespace Backtracking {
     
             let fastResolveButton = document.getElementById(this.FAST_RESOLVE_START_BUTTON_ID);
             fastResolveButton.onclick = function(ev) {
+                _self.getState().stepByStepActionsOpt = null;
                 _self.recreateArrayFromState(destElem, false);
                 let presenter = new Presenter();
                 presenter.startShow();
@@ -521,6 +526,8 @@ namespace Backtracking {
 
             let clearArrayButton = document.getElementById(this.CLEAR_ARRAY_BUTTON_ID);
             clearArrayButton.onclick = function(ev) {
+                _self.getState().stepByStepActionsOpt = null;
+                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
                 _self.recreateArrayFromState(destElem, true);
             };
 
@@ -603,14 +610,7 @@ namespace Backtracking {
                         }
                     }
                     if (nextAction.type == ActionType.BACKTRACK_START_FOUND) {
-                        let path = "<br />" + _self.getTranslation("resolved.path") + ":<br />";
-                        for (let i = 0; i < actionsOpt.path.length; i++) {
-                            path += actionsOpt.path[i].toString();
-                            if (i != actionsOpt.path.length - 1) {
-                                path += " ⇒ <br />"
-                            }
-                        }
-                        document.getElementById(_self.CURRENT_ACTION_TEXT).innerHTML = path;
+                        GUIHandler.displayPath(actionsOpt.path);
                     } else {
                         let actionTranslation = _self.getTranslation("actiontype." + ActionType[nextAction.type].toLowerCase());
                         let pointText = "X: " + nextAction.point.x + ", Y: " + nextAction.point.y;
@@ -653,21 +653,25 @@ namespace Backtracking {
                         let row = cell.parentElement as HTMLTableRowElement;
                         switch (_self.getState().clickAction) {
                             case GUIEditorClickAction.START_SET: {
+                                _self.getState().stepByStepActionsOpt = null;
                                 _self.setStart(cell.cellIndex, row.rowIndex);
                                 _self.drawStart(cell.cellIndex, row.rowIndex);
                                 break;
                             }
                             case GUIEditorClickAction.FINISH_SET: {
+                                _self.getState().stepByStepActionsOpt = null;
                                 _self.setDestination(cell.cellIndex, row.rowIndex);
                                 _self.drawDestination(cell.cellIndex, row.rowIndex);
                                 break;
                             }
                             case GUIEditorClickAction.OBSTACLE_SET: {
+                                _self.getState().stepByStepActionsOpt = null;
                                 _self.setObstacle(cell.cellIndex, row.rowIndex);
                                 _self.drawObstacle(cell.cellIndex, row.rowIndex);
                                 break;
                             }
                             case GUIEditorClickAction.UNSET: {
+                                _self.getState().stepByStepActionsOpt = null;
                                 _self.unsetAll(cell.cellIndex, row.rowIndex);
                                 _self.undrawAll(cell.cellIndex, row.rowIndex);
                                 break;
@@ -678,6 +682,17 @@ namespace Backtracking {
             }
         }
     
+        private static displayPath(pathArray: Array<Point>) {
+            let path = "<br />" + this.getTranslation("resolved.path") + ":<br />";
+            for (let i = 0; i < pathArray.length; i++) {
+                path += pathArray[i].toString();
+                if (i != pathArray.length - 1) {
+                    path += " ⇒ <br />";
+                }
+            }
+            document.getElementById(this.CURRENT_ACTION_TEXT).innerHTML = path;
+        }
+
         public static recreateArrayFromState(destElem: HTMLDivElement, removeCellsProps: boolean) {
             let parentDiv = destElem.getElementsByClassName(this.PARENT_DIV_CLASS_NAME)[0];
             parentDiv.parentElement.removeChild(parentDiv);
@@ -1003,19 +1018,25 @@ namespace Backtracking {
                 //Actual backtracking
                 let currentCell = cells.get(this.finish.x, this.finish.y);
                 let startFound = false;
+                let path = new Array<Point>(this.finish);
                 while (startFound == false) {
                     pointsLookupFunc(new Point(currentCell.column, currentCell.row), (checkedCell: PathCell) => {
                         if (checkedCell.isOnPoint(this.start)) {
+                            path.push(this.start)
                             startFound = true;
                             return true;
                         }
                         if (checkedCell.isVisited() && checkedCell.distance == currentCell.distance - 1) {
                             GUIHandler.drawPath(checkedCell.column, checkedCell.row);
                             currentCell = checkedCell;
+                            path.push(new Point(checkedCell.column, checkedCell.row))
                             return true;
                         }
                     });
                 }
+
+
+                GUIHandler.displayPath(path);
             }
         }
 
