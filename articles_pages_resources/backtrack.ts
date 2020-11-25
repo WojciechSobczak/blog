@@ -1,3 +1,12 @@
+import {Point} from "./commons/point"
+import * as T from "./translations"
+import * as B from "./backtrack_solver";
+import Translations = T.Backtracking.Translations;
+import BacktrackSolver = B.Backtracking.BacktrackSolver;
+import LookupStrategy = B.Backtracking.LookupStrategy;
+import ActionType = B.Backtracking.ActionType;
+import StepByStepActions = B.Backtracking.StepByStepActions;
+
 namespace Backtracking {
     export class PathCell {
         public htmlCell: HTMLTableDataCellElement = null;
@@ -11,25 +20,14 @@ namespace Backtracking {
             this.column = column;
             this.row = row;
         }
-    
-        public isVisited(): boolean {
-            return this.distance != null;
-        }
-    
+
         public isObstacle(): boolean {
             return this.obstacle;
         }
-    
-        public isOnPoint(point: Point) {
-            return this.column === point.x && this.row === point.y;
-        }
-    
     }
 
     export class PointSet {
         private values: Array<Point> = [];
-
-
         public add(point: Point): void {
             for (let i = 0; i < this.values.length; i++) {
                 if (this.values[i].equals(point)) {
@@ -77,61 +75,30 @@ namespace Backtracking {
             return 0;
         }
     
-        public get(x: number, y: number): PathCell {
-            return this.cells[y][x];
+        public get(point: Point): PathCell {
+            return this.cells[point.y][point.x];
         }
     }
 
-    export class Point {
-        public x: number;
-        public y: number;
-    
-        constructor(x: number, y: number) {
-            this.x = x;
-            this.y = y;
-        }
-    
-        public equals(point: Point) {
-            return point != null && this.x === point.x && this.y === point.y;
-        }
-
-        public toString(): string {
-            return "(X: " + this.x + ", Y: " + this.y + ")";
-        }
-    }
-    
-    export class CheckOffset {
-        public xOffset: number;
-        public yOffset: number;
-    
-        constructor(xOffset: number, yOffset: number) {
-            this.xOffset = xOffset;
-            this.yOffset = yOffset;
-        }
-    }
 
     export enum GUIEditorClickAction {
         NONE, START_SET, FINISH_SET, OBSTACLE_SET, UNSET
     }
 
-    export enum LookupStrategy {
-        ALL_AROUND, CROSS
-    }
-    
     export class GUIState {
         public rows: number = 2;
         public columns: number = 2;
         public randomObstaclesCount: number = 0;
         public fixedSizeOpt: number = null;
-        public clickAction: GUIEditorClickAction = GUIEditorClickAction.NONE;
-        public cellsArray: Cells2DArray = new Cells2DArray([]);
-        public lookupStrategy: LookupStrategy = LookupStrategy.ALL_AROUND;
+        public clickAction = GUIEditorClickAction.NONE;
+        public cellsArray = new Cells2DArray([]);
+        public lookupStrategy = LookupStrategy.ALL_AROUND;
 
-        public startPointOpt: Point = null;
-        public finishPointOpt: Point = null;
+        public startPoint: Point | null = null;
+        public finishPoint: Point | null = null;
         public obstaclesSet: PointSet = new PointSet();
 
-        public stepByStepActionsOpt: StepByStepActions = null;
+        public stepByStepActions: StepByStepActions | null = null;
     }
     
     
@@ -162,99 +129,6 @@ namespace Backtracking {
         public static MAX_SLIDER_SIZE_VALUE = 200;
     
         public static CURRENT_STATE = new GUIState();
-
-        public static getCookie(name: string) {
-            const value = "; " + document.cookie;
-            const parts = value.split("; " + name + "=");
-            
-            if (parts.length == 2) {
-                return parts.pop().split(";").shift();
-            }
-        }
-
-        public static getTranslation(name: string) {
-            let language = this.getCookie("lang");
-            if (language == null) {
-                language = "PL";
-            }
-            
-            return {
-                "PL": {
-                    "array.settings": "Ustawienia tablicy",
-                    "array.settings.columns": "Liczba kolumn",
-                    "array.settings.rows": "Liczba wierszy",
-                    "array.settings.cell.size": "Rozmiar komórki",
-                    "random.generation.options": "Opcje losowego generowania",
-                    "random.generation.obstacles": "Liczba przeszkód",
-                    "gui.options": "Opcje GUI",
-                    "gui.click.action": "Akcja kliknięcia w tablicę",
-                    "gui.click.action.start_set": "Ustaw punkt startowy",
-                    "gui.click.action.finish_set": "Ustaw punkt końcowy",
-                    "gui.click.action.obstacle_set": "Ustaw przeszkodę",
-                    "gui.click.action.unset_set": "Usuń wszelkie poprzednie ustawienia",
-                    "gui.buttons.actions": "Akcje",
-                    "solver.options": "Opcje solvera",
-                    "solver.lookup.strategy": "Sposób sprawdzania komórek",
-                    "solver.lookup.strategy.all_around": "Sprawdź wszystkie dookoła (8 kierunków)",
-                    "solver.lookup.strategy.cross": "Sprawdź krzyżowe (4 kierunki)",
-                    "actions.automatic.solve": "Rozwiąż automatycznie",
-                    "actions.automatic.steps": "Rozwiąż krok po kroku",
-                    "actions.automatic.next_step": "Następny krok",
-                    "actions.automatic.clear": "Wyczyść tablicę",
-                    "actions.automatic.next_step_display": "Aktualnie robiony krok",
-                    "actiontype.cell_base": "Szukanie z komórki",
-                    "actiontype.cell_check": "Sprawdzanie komórki",
-                    "actiontype.finish_found": "Znaleziono cel!",
-                    "actiontype.distance_set": "Ustawianie odległości od startu",
-                    "actiontype.obstacle_ignore": "Ignorowanie przeszkody",
-                    "actiontype.visited_ignore": "Ignorowanie już odwiedzonej komórki",
-                    "actiontype.backtrack_start_found": "Znaleziono start!",
-                    "actiontype.backtrack_cell_base": "Szukanie z komórki dla ścieżki",
-                    "actiontype.backtrack_cell_check": "Sprawdzanie komórki dla ścieżki",
-                    "actiontype.backtrack_cell_choice": "Znaleziono część ścieżki",
-                    "actiontype.backtrack_cell_ignore": "Ignorowanie kandydata na ścieżkę",
-                    "array.not_resolvable": "Nie da się rozwiązać tego przypadku",
-                    "resolved.path": "Znaleziona ścieżka"
-                },
-                "ENG": {
-                    "array.settings": "Array settings",
-                    "array.settings.columns": "Columns count",
-                    "array.settings.rows": "Rows count",
-                    "array.settings.cell.size": "Cell size",
-                    "random.generation.options": "Random generation options",
-                    "random.generation.obstacles": "Obstacles count",
-                    "gui.options": "GUI options",
-                    "gui.click.action": "Array click action",
-                    "gui.click.action.start_set": "Set start point",
-                    "gui.click.action.finish_set": "Set finish point",
-                    "gui.click.action.obstacle_set": "Set obstacle",
-                    "gui.click.action.unset_set": "Remove all previously set properties",
-                    "gui.buttons.actions": "Actions",
-                    "solver.options": "Solver options",
-                    "solver.lookup.strategy": "Strategy of cell checking",
-                    "solver.lookup.strategy.all_around": "Check all around (8 directions)",
-                    "solver.lookup.strategy.cross": "Check crossed (4 directions)",
-                    "actions.automatic.solve": "Automatic solve",
-                    "actions.automatic.steps": "Step by step solve",
-                    "actions.automatic.next_step": "Next step",
-                    "actions.automatic.clear": "Clear array",
-                    "actions.automatic.next_step_display": "Currently performed step",
-                    "actiontype.cell_base": "Checking from cell",
-                    "actiontype.cell_check": "Checking cell",
-                    "actiontype.finish_found": "Finish found!",
-                    "actiontype.distance_set": "Setting distance on cell",
-                    "actiontype.obstacle_ignore": "Ignoring obstacle",
-                    "actiontype.visited_ignore": "Ignoring already visited cell",
-                    "actiontype.backtrack_start_found": "Backtracking start found!",
-                    "actiontype.backtrack_cell_base": "Backtracking checking from cell",
-                    "actiontype.backtrack_cell_check": "Backtracking cell check",
-                    "actiontype.backtrack_cell_choice": "Chosing cell for path",
-                    "actiontype.backtrack_cell_ignore": "Ignoring cell while backtracking",
-                    "array.not_resolvable": "Not resolvable case",
-                    "resolved.path": "Resolved path"
-                }
-            }[language][name];
-        }
 
 
         public static getState() {
@@ -318,10 +192,10 @@ namespace Backtracking {
             div.innerHTML = `
                 <div>
                     <h2>Array Pathfinding Backtrack solver </h2>
-                    <h3>${this.getTranslation("array.settings")}:</h3>
+                    <h3>${Translations.getTranslation("array.settings")}:</h3>
                     <table>
                         <tr>
-                            <td><label>${this.getTranslation("array.settings.columns")}:</label></td>
+                            <td><label>${Translations.getTranslation("array.settings.columns")}:</label></td>
                             <td>
                                 <input class="article-interactive-input" 
                                     id="${this.ROWS_INPUT_ID}" 
@@ -332,7 +206,7 @@ namespace Backtracking {
                             </td>
                         </tr>
                         <tr>
-                            <td><label>${this.getTranslation("array.settings.rows")}:</label></td>
+                            <td><label>${Translations.getTranslation("array.settings.rows")}:</label></td>
                             <td>
                                 <input class="article-interactive-input" 
                                     id="${this.COLUMNS_INPUT_ID}" 
@@ -342,7 +216,7 @@ namespace Backtracking {
                             </td>
                         </tr>
                         <tr>
-                            <td><label>${this.getTranslation("array.settings.cell.size")}:</label></td>
+                            <td><label>${Translations.getTranslation("array.settings.cell.size")}:</label></td>
                             <td>
                                 <input 
                                     id="${this.SIZE_SLIDER_ID}" 
@@ -355,9 +229,9 @@ namespace Backtracking {
                         </tr>
                     </table>
                     <div>
-                        <h3>${this.getTranslation("random.generation.options")}: </h3>
+                        <h3>${Translations.getTranslation("random.generation.options")}: </h3>
                         <label>
-                            ${this.getTranslation("random.generation.obstacles")}:
+                            ${Translations.getTranslation("random.generation.obstacles")}:
                             <input class="article-interactive-input" 
                                 id="${this.OBSTACLES_INPUT_ID}" 
                                 type="number" 
@@ -367,56 +241,56 @@ namespace Backtracking {
                         </label>
                     </div>
                     <div>
-                        <h3>${this.getTranslation("gui.options")}: </h3>
+                        <h3>${Translations.getTranslation("gui.options")}: </h3>
                         <div>
                             <label>
-                                ${this.getTranslation("gui.click.action")}:
+                                ${Translations.getTranslation("gui.click.action")}:
                                 <select id="${this.CLICK_ACTION_SELECT_ID}" class="article-interactive-input">
                                     <option value="${GUIEditorClickAction.NONE}">-</option>
-                                    <option value="${GUIEditorClickAction.START_SET}">${this.getTranslation("gui.click.action.start_set")}</option>
-                                    <option value="${GUIEditorClickAction.FINISH_SET}">${this.getTranslation("gui.click.action.finish_set")}</option>
-                                    <option value="${GUIEditorClickAction.OBSTACLE_SET}">${this.getTranslation("gui.click.action.obstacle_set")}</option>
-                                    <option value="${GUIEditorClickAction.UNSET}">${this.getTranslation("gui.click.action.unset_set")}</option>
+                                    <option value="${GUIEditorClickAction.START_SET}">${Translations.getTranslation("gui.click.action.start_set")}</option>
+                                    <option value="${GUIEditorClickAction.FINISH_SET}">${Translations.getTranslation("gui.click.action.finish_set")}</option>
+                                    <option value="${GUIEditorClickAction.OBSTACLE_SET}">${Translations.getTranslation("gui.click.action.obstacle_set")}</option>
+                                    <option value="${GUIEditorClickAction.UNSET}">${Translations.getTranslation("gui.click.action.unset_set")}</option>
                                 </select>
                             </label>
                         </div>
                     </div>
                     <div>
-                        <h3>${this.getTranslation("solver.options")}: </h3>
+                        <h3>${Translations.getTranslation("solver.options")}: </h3>
                         <div>
                             <label>
-                                ${this.getTranslation("solver.lookup.strategy")}
+                                ${Translations.getTranslation("solver.lookup.strategy")}
                                 <select id="${this.LOOKUP_STRATEGY_SELECT_ID}" class="article-interactive-input">
-                                    <option value="${LookupStrategy.ALL_AROUND}">${this.getTranslation("solver.lookup.strategy.all_around")}</option>
-                                    <option value="${LookupStrategy.CROSS}">${this.getTranslation("solver.lookup.strategy.cross")}</option>
+                                    <option value="${LookupStrategy.ALL_AROUND}">${Translations.getTranslation("solver.lookup.strategy.all_around")}</option>
+                                    <option value="${LookupStrategy.CROSS}">${Translations.getTranslation("solver.lookup.strategy.cross")}</option>
                                 </select>
                             </label>
                         </div>
                     </div>
                     <div>
-                    <h3>${this.getTranslation("gui.buttons.actions")}: </h3>
+                    <h3>${Translations.getTranslation("gui.buttons.actions")}: </h3>
                         <div>
                             <label>
-                                <button id="${this.FAST_RESOLVE_START_BUTTON_ID}" class="btn">${this.getTranslation("actions.automatic.solve")}</button>
+                                <button id="${this.FAST_RESOLVE_START_BUTTON_ID}" class="btn">${Translations.getTranslation("actions.automatic.solve")}</button>
                             </label>
                         </div>
                         <div>
                             <label>
-                                <button id="${this.STEP_BY_STEP_RESOLVE_BUTTON_ID}" class="btn">${this.getTranslation("actions.automatic.steps")}</button>
+                                <button id="${this.STEP_BY_STEP_RESOLVE_BUTTON_ID}" class="btn">${Translations.getTranslation("actions.automatic.steps")}</button>
                             </label>
                             <label>
-                                <button id="${this.NEXT_STEP_BUTTON_ID}" class="btn">${this.getTranslation("actions.automatic.next_step")}</button>
+                                <button id="${this.NEXT_STEP_BUTTON_ID}" class="btn">${Translations.getTranslation("actions.automatic.next_step")}</button>
                             </label>
                         </div>
                         <div>
                             <label>
-                                <button id="${this.CLEAR_ARRAY_BUTTON_ID}" class="btn">${this.getTranslation("actions.automatic.clear")}</button>
+                                <button id="${this.CLEAR_ARRAY_BUTTON_ID}" class="btn">${Translations.getTranslation("actions.automatic.clear")}</button>
                             </label>
                         </div>
                     </div>
                     <div>
                         <label>
-                            ${this.getTranslation("actions.automatic.next_step_display")}:
+                            ${Translations.getTranslation("actions.automatic.next_step_display")}:
                             <span id="${this.CURRENT_ACTION_TEXT}"></span>
                         </label>
                     </div>
@@ -685,7 +559,7 @@ namespace Backtracking {
         }
     
         private static displayPath(pathArray: Array<Point>) {
-            let path = "<br />" + this.getTranslation("resolved.path") + ":<br />";
+            let path = "<br />" + Translations.getTranslation("resolved.path") + ":<br />";
             for (let i = 0; i < pathArray.length; i++) {
                 path += pathArray[i].toString();
                 if (i != pathArray.length - 1) {
@@ -702,24 +576,24 @@ namespace Backtracking {
             this.CURRENT_STATE.cellsArray = this.getCreatedArray(destElem);
 
             if (removeCellsProps) {
-                this.getState().startPointOpt = null;
-                this.getState().finishPointOpt = null;
+                this.getState().startPoint = null;
+                this.getState().finishPoint = null;
                 this.getState().obstaclesSet = new PointSet();
             }
 
-            let startPointOpt = this.getState().startPointOpt;
-            let finishPointOpt = this.getState().finishPointOpt;
-            if (startPointOpt != null) {
-                this.drawStart(startPointOpt.x, startPointOpt.y);
+            let startPoint = this.getState().startPoint;
+            let finishPoint = this.getState().finishPoint;
+            if (startPoint != null) {
+                this.drawStart(startPoint);
             }
-            if (finishPointOpt != null) {
-                this.drawDestination(finishPointOpt.x, finishPointOpt.y);
+            if (finishPoint != null) {
+                this.drawDestination(finishPoint);
             }
             let obstacles = this.getState().obstaclesSet;
             this.getState().obstaclesSet = new PointSet();
             obstacles.forEach((obstaclePoint) => {
-                this.setObstacle(obstaclePoint.x, obstaclePoint.y);
-                this.drawObstacle(obstaclePoint.x, obstaclePoint.y);
+                this.setObstacle(obstaclePoint);
+                this.drawObstacle(obstaclePoint);
             })
             this.setupGUICallbacks(destElem);
         }
@@ -735,459 +609,111 @@ namespace Backtracking {
             this.setupGUICallbacks(destElem);
         }
     
-        public static setObstacle(column: number, row: number): void {
-            this.unsetAll(column, row);
-            let cell = this.getStateCells().get(column, row);
+        public static setObstacle(point: Point): void {
+            this.unsetAll(point);
+            let cell = this.getStateCells().get(point);
             cell.obstacle = true;
-            this.getState().obstaclesSet.add(new Point(column, row));
+            this.getState().obstaclesSet.add(point);
         }
 
-        public static drawObstacle(column: number, row: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static drawObstacle(point: Point): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.setAttribute("style", "background-color: grey;");
         }
     
-        public static setDistance(column: number, row: number, distance: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static setDistance(point: Point, distance: number): void {
+            let cell = this.getStateCells().get(point);
             cell.distance = distance;
         }
 
-        public static drawDistance(column: number, row: number, distance: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static drawDistance(point: Point, distance: number): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.textContent = distance.toFixed();
         }
     
-        public static drawPath(column: number, row: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static drawPath(point: Point): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.setAttribute("style", "background-color: lightgreen;");
         }
     
-        public static setStart(column: number, row: number): void {
-            let startPointOpt = this.CURRENT_STATE.startPointOpt;
-            if (startPointOpt != null) {
-                this.unsetAll(startPointOpt.x, startPointOpt.y);
+        public static setStart(point: Point): void {
+            let startPoint = this.CURRENT_STATE.startPoint;
+            if (startPoint != null) {
+                this.unsetAll(startPoint);
             }
-            this.CURRENT_STATE.startPointOpt = new Point(column, row);
+            this.CURRENT_STATE.startPoint = point;
         }
 
-        public static drawStart(column: number, row: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static drawStart(point: Point): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.setAttribute("style", "background-color: lightskyblue;");
             cell.htmlCell.textContent = "START";
         }
     
-        public static setDestination(column: number, row: number): void {
-            let finishPointOpt = this.CURRENT_STATE.finishPointOpt;
-            if (finishPointOpt != null) {
-                this.unsetAll(finishPointOpt.x, finishPointOpt.y);
+        public static setDestination(point: Point): void {
+            let finishPoint = this.CURRENT_STATE.finishPoint;
+            if (finishPoint != null) {
+                this.unsetAll(finishPoint);
             }
-            this.CURRENT_STATE.finishPointOpt = new Point(column, row);
+            this.CURRENT_STATE.finishPoint = point;
         }
 
-        public static drawDestination(column: number, row: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static drawDestination(point: Point): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.setAttribute("style", "background-color: lightcoral;");
             cell.htmlCell.textContent = "END";
         }
 
         public static drawBaseCell(point: Point) {
-            let cell = this.getStateCells().get(point.x, point.y);
+            let cell = this.getStateCells().get(point);
             this.preserveStyle(point);
             cell.htmlCell.setAttribute("style", "background-color: lightblue;");
         }
 
         public static drawCellCheck(point: Point) {
-            let cell = this.getStateCells().get(point.x, point.y);
+            let cell = this.getStateCells().get(point);
             this.preserveStyle(point);
             cell.htmlCell.setAttribute("style", "background-color: #FFD700;");
         }
 
         public static preserveStyle(point: Point) {
-            let cell = this.getStateCells().get(point.x, point.y);
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.setAttribute("prev-style", cell.htmlCell.getAttribute("style"));
         }
 
         public static restoreStyle(point: Point) {
-            let cell = this.getStateCells().get(point.x, point.y);
+            let cell = this.getStateCells().get(point);
             if (cell.htmlCell.hasAttribute("prev-style")) {
                 cell.htmlCell.setAttribute("style", cell.htmlCell.getAttribute("prev-style"));
             }
         }
 
-        public static unsetAll(column: number, row: number): void {
-            let startPointOpt = this.getState().startPointOpt;
-            if (startPointOpt != null && startPointOpt.x == column && startPointOpt.y == row) {
-                this.getState().startPointOpt = null;
+        public static unsetAll(point: Point): void {
+            let startPoint = this.getState().startPoint;
+            if (startPoint != null && startPoint.equals(point)) {
+                this.getState().startPoint = null;
             }
-            let finishPointOpt = this.getState().finishPointOpt;
-            if (finishPointOpt != null && finishPointOpt.x == column && finishPointOpt.y == row) {
-                this.getState().finishPointOpt = null;
+            let finishPoint = this.getState().finishPoint;
+            if (finishPoint != null && finishPoint.equals(point)) {
+                this.getState().finishPoint = null;
             }
-            this.getState().obstaclesSet.remove(new Point(column, row));
+            this.getState().obstaclesSet.remove(point);
 
-            let cell = this.getStateCells().get(column, row);
+            let cell = this.getStateCells().get(point);
             cell.obstacle = false;
             cell.distance = null;
             cell.htmlCell.removeAttribute("style");
             cell.htmlCell.textContent = "";
         }
 
-        public static undrawAll(column: number, row: number): void {
-            let cell = this.getStateCells().get(column, row);
+        public static undrawAll(point: Point): void {
+            let cell = this.getStateCells().get(point);
             cell.htmlCell.removeAttribute("style");
             cell.htmlCell.textContent = "";
         }
     
     }
-    
-    
-    export class Presenter {
-    
-        private start: Point = null;
-        public setStart(start: Point) {
-            this.start = start;
-        }
-        private finish: Point = null;
-        public setFinish(finish: Point) {
-            this.finish = finish;
-        }
 
-        private static readonly CHECK_AROUND_OFFSETS = new Array<CheckOffset>(
-            new CheckOffset(0, -1), //north
-            new CheckOffset(1, -1), //north-east
-            new CheckOffset(1, 0), //east
-            new CheckOffset(1, 1), //south-east
-            new CheckOffset(0, 1), //south
-            new CheckOffset(-1, 1), //south-west
-            new CheckOffset(-1, 0), // west
-            new CheckOffset(-1, -1) // north-west
-        );
-    
-        private static readonly CHECK_CROSS_OFFSETS = new Array<CheckOffset>(
-            new CheckOffset(0, -1), //north
-            new CheckOffset(1, 0), //east
-            new CheckOffset(0, 1), //south
-            new CheckOffset(-1, 0), // west
-        );
-    
-    
-        public static rand(from, to) {
-            return Math.floor(Math.random() * to) + from; 
-        }
-    
-        private setObstacle(x: number, y: number) {
-            GUIHandler.setObstacle(x, y);
-            GUIHandler.drawObstacle(x, y);
-        }
-    
-        private setVisibleDistance(x: number, y: number, distance: number) {
-            GUIHandler.setDistance(x, y, distance);
-            GUIHandler.drawDistance(x, y, distance);
-        }
-    
-        private setNotVisibleDistance(x: number, y: number, distance: number) {
-            GUIHandler.setDistance(x, y, distance);
-        }
-    
-        public generateObstaclesIfSet() {
-            const guiState = GUIHandler.getState();
-            if (guiState.obstaclesSet.size() != 0 || guiState.randomObstaclesCount == 0) {
-                return;
-            }
-
-            let obstacles = guiState.randomObstaclesCount;
-            const rows = GUIHandler.getStateCells().getRowsCount();
-            const columns = GUIHandler.getStateCells().getColumsCount();
-    
-            let maxCellsWithoutEnds = columns * rows - 2;
-            if (obstacles >= maxCellsWithoutEnds) {
-                obstacles = maxCellsWithoutEnds;
-            }
-    
-            for (let i = 0; i < obstacles;) {
-                let x = Presenter.rand(0, columns);
-                let y = Presenter.rand(0, rows);
-                if (!GUIHandler.getStateCells().get(x, y).obstacle) {
-                    this.setObstacle(x, y);
-                    i++;
-                }
-            }
-        }
-    
-        public static getRandomNonObstaclePoint() {
-            const rows = GUIHandler.getStateCells().getRowsCount();
-            const columns = GUIHandler.getStateCells().getColumsCount();
-            while (true) {
-                let x = this.rand(0, columns);
-                let y = this.rand(0, rows);
-                if (GUIHandler.getStateCells().get(x, y).obstacle == false) {
-                    return new Point(x, y);
-                }
-            };
-        }
-    
-        public setStartPoint() {
-            if (GUIHandler.getState().startPointOpt != null) {
-                this.start = GUIHandler.getState().startPointOpt;
-                return;
-            }
-            do {
-                this.start = Presenter.getRandomNonObstaclePoint();
-            } while (this.start.equals(this.finish));
-            GUIHandler.setStart(this.start.x, this.start.y);
-            GUIHandler.drawStart(this.start.x, this.start.y);
-        }
-    
-        public setFinishPoint() {
-            if (GUIHandler.getState().finishPointOpt != null) {
-                this.finish = GUIHandler.getState().finishPointOpt;
-                return;
-            }
-            do {
-                this.finish = Presenter.getRandomNonObstaclePoint();
-            } while (this.finish.equals(this.start))
-            GUIHandler.setDestination(this.finish.x, this.finish.y);
-            GUIHandler.drawDestination(this.finish.x, this.finish.y);
-        }
-    
-        private existsInArray(x: number, y: number): boolean {
-            return x >= 0 && y >= 0 && x < GUIHandler.getStateCells().getColumsCount() && y < GUIHandler.getStateCells().getRowsCount();
-        }
-    
-        private forOffsetedPoints(currentCell: Point, callback: (checkedCell: PathCell) => boolean, offsetsArray: Array<CheckOffset>): void {
-            for (let offset of offsetsArray) {
-                let checkedX = currentCell.x + offset.xOffset;
-                let checkedY = currentCell.y + offset.yOffset;
-                if (this.existsInArray(checkedX, checkedY)) {
-                    let checkedCell = GUIHandler.getStateCells().get(checkedX, checkedY);
-                    if (callback(checkedCell)) {
-                        break;
-                    }
-                }
-            }
-        }
-    
-        private forPointsAround(currentCell: Point, callback: (checkedCell: PathCell) => boolean): void {
-            this.forOffsetedPoints(currentCell, callback, Presenter.CHECK_AROUND_OFFSETS);
-        }
-    
-        private forPointsCross(currentCell: Point, callback: (checkedCell: PathCell) => boolean): void {
-            this.forOffsetedPoints(currentCell, callback, Presenter.CHECK_CROSS_OFFSETS);
-        }
-
-        public startShow() {
-            this.generateObstaclesIfSet();
-            this.setStartPoint();
-            this.setFinishPoint();
-            this.setNotVisibleDistance(this.start.x, this.start.y, 0);
-
-            let cells = GUIHandler.getStateCells();
-
-            let pointsLookupFunc = (currentCell: Point, callback: (checkedCell: PathCell) => boolean) => {
-                this.forPointsAround(currentCell, callback);
-            };
-            if (GUIHandler.getState().lookupStrategy === LookupStrategy.CROSS) {
-                pointsLookupFunc = (currentCell: Point, callback: (checkedCell: PathCell) => boolean) => {
-                    this.forPointsCross(currentCell, callback);
-                };
-            }
-    
-            //Mapping points to their distance
-            let finishFound = false;
-            let pointToVisit: Array<Point> = [this.start];
-            while (pointToVisit.length != 0) {
-                let currentPoint = pointToVisit[0];
-                pointToVisit.splice(0, 1);
-                let currentCell = cells.get(currentPoint.x, currentPoint.y);
-    
-                pointsLookupFunc(new Point(currentCell.column, currentCell.row), (checkedCell: PathCell) => {
-                    if (checkedCell.isOnPoint(this.finish)) {
-                        finishFound = true;
-                        this.setNotVisibleDistance(checkedCell.column, checkedCell.row, currentCell.distance + 1);
-                        return true;
-                    }
-                    if (!checkedCell.isObstacle() && !checkedCell.isVisited()) {
-                        this.setVisibleDistance(checkedCell.column, checkedCell.row, currentCell.distance + 1);
-                        pointToVisit.push(new Point(checkedCell.column, checkedCell.row));
-                    }
-                });
-                if (finishFound) {
-                    break;
-                }
-            }
-    
-            if (finishFound) {
-                //Actual backtracking
-                let currentCell = cells.get(this.finish.x, this.finish.y);
-                let startFound = false;
-                let path = new Array<Point>(this.finish);
-                while (startFound == false) {
-                    pointsLookupFunc(new Point(currentCell.column, currentCell.row), (checkedCell: PathCell) => {
-                        if (checkedCell.isOnPoint(this.start)) {
-                            path.push(this.start)
-                            startFound = true;
-                            return true;
-                        }
-                        if (checkedCell.isVisited() && checkedCell.distance == currentCell.distance - 1) {
-                            GUIHandler.drawPath(checkedCell.column, checkedCell.row);
-                            currentCell = checkedCell;
-                            path.push(new Point(checkedCell.column, checkedCell.row))
-                            return true;
-                        }
-                    });
-                }
-
-
-                GUIHandler.displayPath(path);
-            }
-        }
-
-        public calculateAllSteps(): StepByStepActions {
-            this.generateObstaclesIfSet();
-            let actionsOutput = new Array<Action>();
-            let start = GUIHandler.getState().startPointOpt;
-            if (start == null) {
-                start = Presenter.getRandomNonObstaclePoint();
-            }
-            let finish = GUIHandler.getState().finishPointOpt;
-            while (finish == null || finish.equals(start)) {
-                finish = Presenter.getRandomNonObstaclePoint();
-            }
-
-            let cellsArray: Array<Array<ActionCell>> = [];
-            for (let row = 0; row < GUIHandler.getStateCells().getRowsCount(); row++) {
-                let cellsRow = new Array<ActionCell>();
-                for (let column = 0; column < GUIHandler.getStateCells().getColumsCount(); column++) {
-                    let stateCell = GUIHandler.getStateCells().get(column, row);
-                    cellsRow.push(new ActionCell(stateCell.obstacle, stateCell.distance));
-                }
-                cellsArray.push(cellsRow);
-            }
-
-            let pointsLookupFunc = (currentCell: Point, callback: (checkedCell: PathCell) => boolean) => {
-                this.forPointsAround(currentCell, callback);
-            };
-            if (GUIHandler.getState().lookupStrategy === LookupStrategy.CROSS) {
-                pointsLookupFunc = (currentCell: Point, callback: (checkedCell: PathCell) => boolean) => {
-                    this.forPointsCross(currentCell, callback);
-                };
-            }
-
-            //Mapping points to their distance
-            let finishFound = false;
-            let pointToVisit: Array<Point> = [start];
-            cellsArray[start.y][start.x].distanceOpt = 0;
-            while (pointToVisit.length != 0) {
-                let currentPoint = pointToVisit[0];
-                pointToVisit.splice(0, 1);
-                let currentCell = cellsArray[currentPoint.y][currentPoint.x];
-                actionsOutput.push(new Action(ActionType.CELL_BASE, currentPoint));
-    
-                pointsLookupFunc(currentPoint, (stateCheckedCell: PathCell) => {
-                    let lookedUpPoint = new Point(stateCheckedCell.column, stateCheckedCell.row);
-                    let lookedUpCell = cellsArray[lookedUpPoint.y][lookedUpPoint.x];
-                    actionsOutput.push(new Action(ActionType.CELL_CHECK, lookedUpPoint));
-                    if (stateCheckedCell.isOnPoint(finish)) {
-                        actionsOutput.push(new Action(ActionType.FINISH_FOUND, finish));
-                        finishFound = true;
-                        lookedUpCell.distanceOpt = currentCell.distanceOpt + 1;
-                        actionsOutput.push(new Action(ActionType.DISTANCE_SET, finish, lookedUpCell.distanceOpt));
-                        return true;
-                    }
-                    if (lookedUpCell.obstacle) {
-                        actionsOutput.push(new Action(ActionType.OBSTACLE_IGNORE, lookedUpPoint));
-                        return false;
-                    } 
-                    if (!lookedUpCell.obstacle && lookedUpCell.distanceOpt == null) {
-                        lookedUpCell.distanceOpt = currentCell.distanceOpt + 1;
-                        actionsOutput.push(new Action(ActionType.DISTANCE_SET, lookedUpPoint, lookedUpCell.distanceOpt));
-                        pointToVisit.push(lookedUpPoint);
-                        return false;
-                    }
-                    actionsOutput.push(new Action(ActionType.VISITED_IGNORE, lookedUpPoint));
-                });
-                if (finishFound) {
-                    break;
-                }
-            }
-    
-            let solvedPath = new Array<Point>(finish);
-            if (finishFound) {
-                //Actual backtracking
-                let currentPoint = finish;
-                let currentCell = cellsArray[finish.y][finish.x];
-                let startFound = false;
-                while (startFound == false) {
-                    actionsOutput.push(new Action(ActionType.BACKTRACK_CELL_BASE, currentPoint));
-                    pointsLookupFunc(currentPoint, (stateCheckedCell: PathCell) => {
-                        let lookedUpPoint = new Point(stateCheckedCell.column, stateCheckedCell.row);
-                        let lookedUpCell = cellsArray[lookedUpPoint.y][lookedUpPoint.x];
-                        actionsOutput.push(new Action(ActionType.BACKTRACK_CELL_CHECK, lookedUpPoint));
-                        if (lookedUpPoint.equals(start)) {
-                            actionsOutput.push(new Action(ActionType.BACKTRACK_START_FOUND, lookedUpPoint));
-                            startFound = true;
-                            solvedPath.push(start);
-                            return true;
-                        } else if (lookedUpCell.distanceOpt != null && lookedUpCell.distanceOpt == currentCell.distanceOpt - 1) {
-                            actionsOutput.push(new Action(ActionType.BACKTRACK_CELL_CHOICE, lookedUpPoint));
-                            solvedPath.push(lookedUpPoint);
-                            currentCell = lookedUpCell;
-                            currentPoint = lookedUpPoint;
-                            return true;
-                        }
-                        actionsOutput.push(new Action(ActionType.BACKTRACK_CELL_IGNORE, lookedUpPoint));
-                    });
-                }
-            }
-
-            return new StepByStepActions(start, finish, actionsOutput, finishFound, solvedPath.reverse());
-        }
-    }
-
-    export class ActionCell {
-        obstacle: boolean = false;
-        distanceOpt: number = null;
-
-        constructor(obstacle: boolean, distanceOpt?: number) {
-            this.obstacle = obstacle;
-            this.distanceOpt = distanceOpt;
-        }
-    }
-
-    export enum ActionType {
-        CELL_BASE, CELL_CHECK, FINISH_FOUND, DISTANCE_SET, OBSTACLE_IGNORE, VISITED_IGNORE,
-        BACKTRACK_START_FOUND, BACKTRACK_CELL_BASE, BACKTRACK_CELL_CHECK, BACKTRACK_CELL_CHOICE,
-        BACKTRACK_CELL_IGNORE
-    }
-
-    export class Action {
-        public type: ActionType = ActionType.DISTANCE_SET;
-        public point: Point = new Point(0, 0);
-        public distanceSetOpt: number = null;
-
-        constructor(type: ActionType, point: Point, distance?: number) {
-            this.type = type;
-            this.point = point;
-            this.distanceSetOpt = distance;
-        }
-    }
-
-    export class StepByStepActions {
-        public startPoint: Point = new Point(0, 0);
-        public finishPoint: Point = new Point(0, 0);
-        public previousBaseOpt: Point = null;
-        public actions: Array<Action> = [];
-        public resolved: boolean = true;
-        public path: Array<Point> = [];
-
-        constructor(startPoint: Point, finishPoint: Point, actions: Array<Action>, resolved: boolean, path: Array<Point>) {
-            this.startPoint = startPoint;
-            this.finishPoint = finishPoint;
-            this.actions = actions;
-            this.resolved = resolved;
-            this.path = path;
-        }
-    }
 
 }
 
