@@ -1,7 +1,7 @@
-import {Pair} from "./commons/pair";
-import {Point} from "./commons/point"
-import {Random} from "./commons/random"
-import {FIFONull} from "./commons/fifo"
+import {Pair} from "./commons/pair.js";
+import {Point} from "./commons/point.js"
+import {Random} from "./commons/random.js"
+import {FIFONull} from "./commons/fifo.js"
 
 export namespace Backtracking {
 
@@ -50,12 +50,12 @@ export namespace Backtracking {
     export class Action {
         public type: ActionType = ActionType.DISTANCE_SET;
         public point: Point = new Point(0, 0);
-        public distanceSetOpt: number = null;
+        public distance: number | null = null;
     
         constructor(type: ActionType, point: Point, distance?: number) {
             this.type = type;
             this.point = point;
-            this.distanceSetOpt = distance;
+            this.distance = distance;
         }
     }
     
@@ -63,12 +63,14 @@ export namespace Backtracking {
         public startPoint: Point;
         public finishPoint: Point;
         public actions: Array<Action>;
-        public path: Array<Point> | null;
+        public path: Array<Point>;
+        public generatedObstacles: Array<Point>;
     
-        constructor(startPoint: Point, finishPoint: Point, actions: Array<Action>, path?: Array<Point>) {
+        constructor(startPoint: Point, finishPoint: Point, actions: Array<Action>, generatedObstacles: Array<Point>, path: Array<Point>) {
             this.startPoint = startPoint;
             this.finishPoint = finishPoint;
             this.actions = actions;
+            this.generatedObstacles = generatedObstacles;
             this.path = path;
         }
     }
@@ -113,11 +115,14 @@ export namespace Backtracking {
             };
         }
 
-        private static generateObstacles(arrayToSolve: Array<Array<FieldType>>, obstaclesCount: number): void {
+        private static generateObstacles(arrayToSolve: Array<Array<FieldType>>, obstaclesCount: number): Array<Point> {
+            let generatedObstacles = new Array<Point>();
             for (let i = 0; i < obstaclesCount; i++) {
                 let nonObstacle = this.getSettableField(arrayToSolve);
                 arrayToSolve[nonObstacle.y][nonObstacle.x] = FieldType.OBSTACLE;
+                generatedObstacles.push(nonObstacle);
             }
+            return generatedObstacles;
         }
 
         private static forEveryCell(arrayToSolve: Array<Array<FieldType>>, callback: CellCallback) {
@@ -182,8 +187,10 @@ export namespace Backtracking {
 
         public static solve(arrayToSolve: Array<Array<FieldType>>, lookupStrategy: LookupStrategy, fastSolve: boolean, randomObstaclesCount?: number): StepByStepActions {
             let actionsOutput = new Array<Action>();
+
+            let generatedObstacles = new Array<Point>();
             if (randomObstaclesCount != null) {
-                BacktrackSolver.generateObstacles(arrayToSolve, randomObstaclesCount);
+                generatedObstacles = BacktrackSolver.generateObstacles(arrayToSolve, randomObstaclesCount);
             }
             let startAndFinish = BacktrackSolver.getStartAndFinish(arrayToSolve);
             let start = startAndFinish.first;
@@ -283,7 +290,8 @@ export namespace Backtracking {
                 start, 
                 finish, 
                 actionsOutput, 
-                solvedPath.length != 0 ? solvedPath.reverse() : null
+                generatedObstacles,
+                solvedPath.reverse()
             );
         }
     }

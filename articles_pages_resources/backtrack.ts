@@ -1,15 +1,18 @@
-import {Point} from "./commons/point"
-import * as T from "./translations"
-import * as B from "./backtrack_solver";
+import {Point} from "./commons/point.js"
+import * as T from "./translations.js"
+import * as B from "./backtrack_solver.js";
+
 import Translations = T.Backtracking.Translations;
 import BacktrackSolver = B.Backtracking.BacktrackSolver;
 import LookupStrategy = B.Backtracking.LookupStrategy;
+import Action = B.Backtracking.Action;
 import ActionType = B.Backtracking.ActionType;
+import FieldType = B.Backtracking.FieldType;
 import StepByStepActions = B.Backtracking.StepByStepActions;
 
-namespace Backtracking {
+export namespace Backtracking {
     export class PathCell {
-        public htmlCell: HTMLTableDataCellElement = null;
+        public htmlCell: HTMLTableDataCellElement;
         public obstacle: boolean = false;
         public distance: number = null;
         public row: number = 0;
@@ -86,10 +89,11 @@ namespace Backtracking {
     }
 
     export class GUIState {
+        public destinationDiv: HTMLDivElement = null;
         public rows: number = 2;
         public columns: number = 2;
         public randomObstaclesCount: number = 0;
-        public fixedSizeOpt: number = null;
+        public fixedSize: number | null = null;
         public clickAction = GUIEditorClickAction.NONE;
         public cellsArray = new Cells2DArray([]);
         public lookupStrategy = LookupStrategy.ALL_AROUND;
@@ -150,9 +154,9 @@ namespace Backtracking {
         private static generateTableStyle(parentSizePx: number) {
             let height = parentSizePx / this.CURRENT_STATE.rows;
             let width = parentSizePx / this.CURRENT_STATE.columns;
-            if (this.CURRENT_STATE.fixedSizeOpt != null) {
-                height = this.CURRENT_STATE.fixedSizeOpt;
-                width = this.CURRENT_STATE.fixedSizeOpt;
+            if (this.CURRENT_STATE.fixedSize != null) {
+                height = this.CURRENT_STATE.fixedSize;
+                width = this.CURRENT_STATE.fixedSize;
             }
     
             let size = Math.min(width, height);
@@ -344,215 +348,301 @@ namespace Backtracking {
     
             htmlStyle.innerHTML = htmlStyle.innerHTML + this.generateTableStyle(htmlParentDiv.getBoundingClientRect().width);
         }
+
+        public static clearActionsText() {
+            document.getElementById(this.CURRENT_ACTION_TEXT).textContent = "";
+        }
+
+        public static onRowsInputChange(input: HTMLInputElement) {
+            this.getState().stepByStepActions = null;
+            this.clearActionsText();
+
+            let rows = parseInt(input.value);
+            if (rows && rows >= this.MIN_ROW_VALUE) {
+                this.getState().rows = rows;
+                this.recreateArrayFromState(true);
+            }
+        }
+
+        public static onColumnsInputChange(input: HTMLInputElement) {
+            this.getState().stepByStepActions = null;
+            this.clearActionsText();
+            let columns = parseInt(input.value);
+            if (columns && columns >= this.MIN_COLUMNS_VALUE) {
+                this.getState().columns = columns;
+                this.recreateArrayFromState(true);
+            }
+        }
+
+        public static onObstaclesInputChange(input: HTMLInputElement) {
+            let obstacles = parseInt(input.value);
+            if (obstacles && obstacles >= this.MIN_OBSTACLES_VALUE) {
+                this.getState().randomObstaclesCount = obstacles;
+            }
+        }
+
+        public static onClearArrayButtonClicked(input: HTMLInputElement) {
+            this.getState().stepByStepActions = null;
+            this.clearActionsText();
+            this.recreateArrayFromState(true);
+        }
+
+        public static onSizeSliderChange(input: HTMLInputElement) {
+            let size = parseInt(input.value);
+            if (size && size >= this.MIN_SLIDER_SIZE_VALUE) {
+                this.getState().fixedSize = size;
+                this.recreateArrayFromState(false);
+            }
+        }
+
+        public static onClickActionSelectChange(select: HTMLSelectElement) {
+            let selectedIndex = select.selectedIndex;
+            let selectedVal = parseInt(select.options[selectedIndex].value) as GUIEditorClickAction;
+            this.getState().clickAction = selectedVal;
+        }
+
+        public static onLookupStrategySelectChange(select: HTMLSelectElement) {
+            let selectedIndex = select.selectedIndex;
+            let selectedVal = parseInt(select.options[selectedIndex].value) as LookupStrategy;
+            this.getState().lookupStrategy = selectedVal;
+        }
+
+        public static onSingleCellClick(cell: HTMLTableDataCellElement, row: HTMLTableRowElement) {
+            if (this.getState().clickAction !== GUIEditorClickAction.NONE) {
+                this.getState().stepByStepActions = null;
+            }
+            let cellPoint = new Point(cell.cellIndex, row.rowIndex);
+            switch (this.getState().clickAction) {
+                case GUIEditorClickAction.START_SET: {
+                    this.setStart(cellPoint);
+                    this.drawStart(cellPoint);
+                    break;
+                }
+                case GUIEditorClickAction.FINISH_SET: {
+                    this.setDestination(cellPoint);
+                    this.drawDestination(cellPoint);
+                    break;
+                }
+                case GUIEditorClickAction.OBSTACLE_SET: {
+                    this.setObstacle(cellPoint);
+                    this.drawObstacle(cellPoint);
+                    break;
+                }
+                case GUIEditorClickAction.UNSET: {
+                    this.unsetAll(cellPoint);
+                    this.undrawAll(cellPoint);
+                    break;
+                }
+            }
+        }
+
+        public static getSolverInputArray(): Array<Array<FieldType>> {
+            let cellsArray = this.getState().cellsArray;
+            let startPoint = this.getState().startPoint;
+            let finishPoint = this.getState().finishPoint;
+            
+            let outputArray = new Array<Array<FieldType>>();
+            for (let row = 0; row < cellsArray.getRowsCount(); row++) {
+                let outputRow = new Array<FieldType>();
+                for (let column = 0; column < cellsArray.getColumsCount(); column++) {
+                    let currentPoint = new Point(column, row);
+                    if (currentPoint.equals(startPoint)) {
+                        outputRow.push(FieldType.START);
+                    } 
+                    else if (currentPoint.equals(finishPoint)) {
+                        outputRow.push(FieldType.FINISH);
+                    } 
+                    else if (cellsArray.get(currentPoint).isObstacle()) {
+                        outputRow.push(FieldType.OBSTACLE);
+                    } else {
+                        outputRow.push(FieldType.FIELD);
+                    }
+                }
+                outputArray.push(outputRow);
+            }
+
+            return outputArray;
+        }
+
+        public static onFastResolveButtonClick() {
+            this.getState().stepByStepActions = null;
+            this.recreateArrayFromState(false);
+
+            let actions = BacktrackSolver.solve(
+                this.getSolverInputArray(), 
+                this.getState().lookupStrategy, 
+                true, 
+                this.getState().obstaclesSet.size() == 0 ? this.getState().randomObstaclesCount : null
+            );
+            for (let action of actions.actions) {
+                if (action.type === ActionType.DISTANCE_SET) {
+                    this.drawDistance(action.point, action.distance);
+                }
+            }
+            for (let pathPoint of actions.path) {
+                this.drawPath(pathPoint);
+            }
+            for (let obstacle of actions.generatedObstacles) {
+                this.drawObstacle(obstacle);
+            }
+            this.drawStart(actions.startPoint);
+            this.drawDestination(actions.finishPoint);
+        }
+
+        public static applySolveAction(action: Action) {
+        }
     
         public static setupGUICallbacks(destElem: HTMLDivElement) {
             var _self = this;
             let rowsInput = document.getElementById(this.ROWS_INPUT_ID);
             rowsInput.onchange = function(ev: Event) {
-                _self.getState().stepByStepActionsOpt = null;
-                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
-                let input = ev.target as HTMLInputElement;
-                let rows = parseInt(input.value);
-                if (rows && rows >= _self.MIN_ROW_VALUE) {
-                    _self.getState().rows = rows;
-                    _self.recreateArrayFromState(destElem, true);
-                }
+                _self.onRowsInputChange(ev.target as HTMLInputElement);
             };
     
             let columnsInput = document.getElementById(this.COLUMNS_INPUT_ID);
             columnsInput.onchange = function(ev: Event) {
-                _self.getState().stepByStepActionsOpt = null;
-                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
-                let input = ev.target as HTMLInputElement;
-                let columns = parseInt(input.value);
-                if (columns && columns >= _self.MIN_COLUMNS_VALUE) {
-                    _self.getState().columns = columns;
-                    _self.recreateArrayFromState(destElem, true);
-                }
+                _self.onColumnsInputChange(ev.target as HTMLInputElement);
             };
     
             let obstaclesInput = document.getElementById(this.OBSTACLES_INPUT_ID);
             obstaclesInput.onchange = function(ev: Event) {
-                let input = ev.target as HTMLInputElement;
-                let obstacles = parseInt(input.value);
-                if (obstacles && obstacles >= _self.MIN_OBSTACLES_VALUE) {
-                    _self.getState().randomObstaclesCount = obstacles;
-                }
-            };
-    
-            let fastResolveButton = document.getElementById(this.FAST_RESOLVE_START_BUTTON_ID);
-            fastResolveButton.onclick = function(ev) {
-                _self.getState().stepByStepActionsOpt = null;
-                _self.recreateArrayFromState(destElem, false);
-                let presenter = new Presenter();
-                presenter.startShow();
-            };
-
-            let stepByStepResolveButton = document.getElementById(this.STEP_BY_STEP_RESOLVE_BUTTON_ID);
-            stepByStepResolveButton.onclick = function(ev) {
-                _self.recreateArrayFromState(destElem, false);
-                let presenter = new Presenter();
-                let actions = presenter.calculateAllSteps();
-                _self.getState().stepByStepActionsOpt = actions;
-                _self.setStart(actions.startPoint.x, actions.startPoint.y);
-                _self.drawStart(actions.startPoint.x, actions.startPoint.y)
-                _self.setDestination(actions.finishPoint.x, actions.finishPoint.y);
-                _self.drawDestination(actions.finishPoint.x, actions.finishPoint.y)
+                _self.onObstaclesInputChange(ev.target as HTMLInputElement);
             };
 
             let clearArrayButton = document.getElementById(this.CLEAR_ARRAY_BUTTON_ID);
             clearArrayButton.onclick = function(ev) {
-                _self.getState().stepByStepActionsOpt = null;
-                document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = "";
-                _self.recreateArrayFromState(destElem, true);
+                _self.onClearArrayButtonClicked(ev.target as HTMLInputElement);
             };
 
-            let nextStepButton = document.getElementById(this.NEXT_STEP_BUTTON_ID);
-            nextStepButton.onclick = function(ev) {
-                let actionsOpt = _self.getState().stepByStepActionsOpt;
-                console.log(actionsOpt);
-                if (actionsOpt != null && actionsOpt.actions.length != 0) {
-                    if (actionsOpt.resolved == false) {
-                        document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = _self.getTranslation("array.not_resolvable");
-                        return;
-                    }
-
-                    let nextAction = actionsOpt.actions[0];
-                    actionsOpt.actions.splice(0, 1);
-                    switch(nextAction.type) {
-                        case ActionType.CELL_BASE: {
-                            if (actionsOpt.previousBaseOpt != null) {
-                                _self.restoreStyle(actionsOpt.previousBaseOpt);
-                            }
-                            _self.drawBaseCell(nextAction.point);
-                            actionsOpt.previousBaseOpt = nextAction.point;
-                            break;
-                        }
-                        case ActionType.CELL_CHECK: {
-                            _self.drawCellCheck(nextAction.point);
-                            break;
-                        }
-                        case ActionType.FINISH_FOUND: {
-                            if (actionsOpt.previousBaseOpt != null) {
-                                _self.restoreStyle(actionsOpt.previousBaseOpt);
-                            }
-                            _self.drawDestination(nextAction.point.x, nextAction.point.y);
-                            break;
-                        }
-                        case ActionType.DISTANCE_SET: {
-                            _self.drawDistance(nextAction.point.x, nextAction.point.y, nextAction.distanceSetOpt);
-                            _self.restoreStyle(nextAction.point);
-                            break;
-                        }
-                        case ActionType.OBSTACLE_IGNORE: {
-                            _self.restoreStyle(nextAction.point);
-                            break;
-                        }
-                        case ActionType.VISITED_IGNORE: {
-                            _self.restoreStyle(nextAction.point);
-                            break;
-                        }
-                        case ActionType.BACKTRACK_START_FOUND: {
-                            _self.drawStart(nextAction.point.x, nextAction.point.y);
-                            if (actionsOpt.previousBaseOpt != null) {
-                                _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-                            }
-                            break;
-                        }
-                        case ActionType.BACKTRACK_CELL_BASE: {
-                            if (actionsOpt.previousBaseOpt != null) {
-                                if (actionsOpt.previousBaseOpt.equals(actionsOpt.finishPoint)) {
-                                    _self.drawDestination(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-                                }
-                            }
-                            _self.drawBaseCell(nextAction.point);
-                            actionsOpt.previousBaseOpt = nextAction.point;
-                            break;
-                        }
-                        case ActionType.BACKTRACK_CELL_CHECK: {
-                            _self.drawCellCheck(nextAction.point);
-                            break;
-                        }
-                        case ActionType.BACKTRACK_CELL_IGNORE: {
-                            _self.restoreStyle(nextAction.point);
-                            break;
-                        }
-                        case ActionType.BACKTRACK_CELL_CHOICE: {
-                            if (actionsOpt.previousBaseOpt != null) {
-                                _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-                            }
-                            _self.drawPath(nextAction.point.x, nextAction.point.y);
-                            break;
-                        }
-                    }
-                    if (nextAction.type == ActionType.BACKTRACK_START_FOUND) {
-                        GUIHandler.displayPath(actionsOpt.path);
-                    } else {
-                        let actionTranslation = _self.getTranslation("actiontype." + ActionType[nextAction.type].toLowerCase());
-                        let pointText = "X: " + nextAction.point.x + ", Y: " + nextAction.point.y;
-                        document.getElementById(_self.CURRENT_ACTION_TEXT).textContent =  actionTranslation + " ⇒ (" + pointText + ")";
-                    }
-                }
-            };
-    
             let sizeSlider = document.getElementById(this.SIZE_SLIDER_ID);
             sizeSlider.oninput = function(ev) {
-                let input = ev.target as HTMLInputElement;
-                let size = parseInt(input.value);
-                if (size && size >= _self.MIN_SLIDER_SIZE_VALUE) {
-                    _self.getState().fixedSizeOpt = size;
-                    _self.recreateArrayFromState(destElem, false);
-                }
+                _self.onSizeSliderChange(ev.target as HTMLInputElement);
             };
 
             let clickActionSelect = document.getElementById(this.CLICK_ACTION_SELECT_ID);
             clickActionSelect.onchange = function(ev) {
-                let select = ev.target as HTMLSelectElement;
-                let selectedIndex = select.selectedIndex;
-                let selectedVal = parseInt(select.options[selectedIndex].value) as GUIEditorClickAction;
-                _self.getState().clickAction = selectedVal;
+                _self.onClickActionSelectChange(ev.target as HTMLSelectElement);
             }
 
             let lookupStrategy = document.getElementById(this.LOOKUP_STRATEGY_SELECT_ID);
             lookupStrategy.onchange = function(ev) {
-                let select = ev.target as HTMLSelectElement;
-                let selectedIndex = select.selectedIndex;
-                let selectedVal = parseInt(select.options[selectedIndex].value) as LookupStrategy;
-                _self.getState().lookupStrategy = selectedVal;
+               _self.onLookupStrategySelectChange(ev.target as HTMLSelectElement);
             }
+    
+            let fastResolveButton = document.getElementById(this.FAST_RESOLVE_START_BUTTON_ID);
+            fastResolveButton.onclick = function(ev) {
+               _self.onFastResolveButtonClick();
+            };
+
+            // let stepByStepResolveButton = document.getElementById(this.STEP_BY_STEP_RESOLVE_BUTTON_ID);
+            // stepByStepResolveButton.onclick = function(ev) {
+            //     _self.recreateArrayFromState(destElem, false);
+            //     let presenter = new Presenter();
+            //     let actions = presenter.calculateAllSteps();
+            //     _self.getState().stepByStepActionsOpt = actions;
+            //     _self.setStart(actions.startPoint.x, actions.startPoint.y);
+            //     _self.drawStart(actions.startPoint.x, actions.startPoint.y)
+            //     _self.setDestination(actions.finishPoint.x, actions.finishPoint.y);
+            //     _self.drawDestination(actions.finishPoint.x, actions.finishPoint.y)
+            // };
+
+            
+
+            // let nextStepButton = document.getElementById(this.NEXT_STEP_BUTTON_ID);
+            // nextStepButton.onclick = function(ev) {
+            //     let actionsOpt = _self.getState().stepByStepActionsOpt;
+            //     console.log(actionsOpt);
+            //     if (actionsOpt != null && actionsOpt.actions.length != 0) {
+            //         if (actionsOpt.resolved == false) {
+            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = _self.getTranslation("array.not_resolvable");
+            //             return;
+            //         }
+
+            //         let nextAction = actionsOpt.actions[0];
+            //         actionsOpt.actions.splice(0, 1);
+            //         switch(nextAction.type) {
+            //             case ActionType.CELL_BASE: {
+            //                 if (actionsOpt.previousBaseOpt != null) {
+            //                     _self.restoreStyle(actionsOpt.previousBaseOpt);
+            //                 }
+            //                 _self.drawBaseCell(nextAction.point);
+            //                 actionsOpt.previousBaseOpt = nextAction.point;
+            //                 break;
+            //             }
+            //             case ActionType.CELL_CHECK: {
+            //                 _self.drawCellCheck(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.FINISH_FOUND: {
+            //                 if (actionsOpt.previousBaseOpt != null) {
+            //                     _self.restoreStyle(actionsOpt.previousBaseOpt);
+            //                 }
+            //                 _self.drawDestination(nextAction.point.x, nextAction.point.y);
+            //                 break;
+            //             }
+            //             case ActionType.DISTANCE_SET: {
+            //                 _self.drawDistance(nextAction.point.x, nextAction.point.y, nextAction.distanceSetOpt);
+            //                 _self.restoreStyle(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.OBSTACLE_IGNORE: {
+            //                 _self.restoreStyle(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.VISITED_IGNORE: {
+            //                 _self.restoreStyle(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.BACKTRACK_START_FOUND: {
+            //                 _self.drawStart(nextAction.point.x, nextAction.point.y);
+            //                 if (actionsOpt.previousBaseOpt != null) {
+            //                     _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
+            //                 }
+            //                 break;
+            //             }
+            //             case ActionType.BACKTRACK_CELL_BASE: {
+            //                 if (actionsOpt.previousBaseOpt != null) {
+            //                     if (actionsOpt.previousBaseOpt.equals(actionsOpt.finishPoint)) {
+            //                         _self.drawDestination(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
+            //                     }
+            //                 }
+            //                 _self.drawBaseCell(nextAction.point);
+            //                 actionsOpt.previousBaseOpt = nextAction.point;
+            //                 break;
+            //             }
+            //             case ActionType.BACKTRACK_CELL_CHECK: {
+            //                 _self.drawCellCheck(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.BACKTRACK_CELL_IGNORE: {
+            //                 _self.restoreStyle(nextAction.point);
+            //                 break;
+            //             }
+            //             case ActionType.BACKTRACK_CELL_CHOICE: {
+            //                 if (actionsOpt.previousBaseOpt != null) {
+            //                     _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
+            //                 }
+            //                 _self.drawPath(nextAction.point.x, nextAction.point.y);
+            //                 break;
+            //             }
+            //         }
+            //         if (nextAction.type == ActionType.BACKTRACK_START_FOUND) {
+            //             GUIHandler.displayPath(actionsOpt.path);
+            //         } else {
+            //             let actionTranslation = _self.getTranslation("actiontype." + ActionType[nextAction.type].toLowerCase());
+            //             let pointText = "X: " + nextAction.point.x + ", Y: " + nextAction.point.y;
+            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent =  actionTranslation + " ⇒ (" + pointText + ")";
+            //         }
+            //     }
+            // };
 
             let cellsArray = this.getStateCells();
             for (var row = 0; row < cellsArray.getRowsCount(); row++) {
                 for (var column = 0; column < cellsArray.getColumsCount(); column++) {
-                    cellsArray.get(column, row).htmlCell.onclick = function(ev) {
+                    cellsArray.get(new Point(column, row)).htmlCell.onclick = function(ev) {
                         let cell = ev.target as HTMLTableDataCellElement;
                         let row = cell.parentElement as HTMLTableRowElement;
-                        switch (_self.getState().clickAction) {
-                            case GUIEditorClickAction.START_SET: {
-                                _self.getState().stepByStepActionsOpt = null;
-                                _self.setStart(cell.cellIndex, row.rowIndex);
-                                _self.drawStart(cell.cellIndex, row.rowIndex);
-                                break;
-                            }
-                            case GUIEditorClickAction.FINISH_SET: {
-                                _self.getState().stepByStepActionsOpt = null;
-                                _self.setDestination(cell.cellIndex, row.rowIndex);
-                                _self.drawDestination(cell.cellIndex, row.rowIndex);
-                                break;
-                            }
-                            case GUIEditorClickAction.OBSTACLE_SET: {
-                                _self.getState().stepByStepActionsOpt = null;
-                                _self.setObstacle(cell.cellIndex, row.rowIndex);
-                                _self.drawObstacle(cell.cellIndex, row.rowIndex);
-                                break;
-                            }
-                            case GUIEditorClickAction.UNSET: {
-                                _self.getState().stepByStepActionsOpt = null;
-                                _self.unsetAll(cell.cellIndex, row.rowIndex);
-                                _self.undrawAll(cell.cellIndex, row.rowIndex);
-                                break;
-                            }
-                        }
+                        _self.onSingleCellClick(cell, row);
                     }
                 }
             }
@@ -569,7 +659,8 @@ namespace Backtracking {
             document.getElementById(this.CURRENT_ACTION_TEXT).innerHTML = path;
         }
 
-        public static recreateArrayFromState(destElem: HTMLDivElement, removeCellsProps: boolean) {
+        public static recreateArrayFromState(removeCellsProps: boolean) {
+            let destElem = this.getState().destinationDiv;
             let parentDiv = destElem.getElementsByClassName(this.PARENT_DIV_CLASS_NAME)[0];
             parentDiv.parentElement.removeChild(parentDiv);
             this.createArray(destElem, this.CURRENT_STATE.rows, this.CURRENT_STATE.columns);
@@ -598,14 +689,14 @@ namespace Backtracking {
             this.setupGUICallbacks(destElem);
         }
     
-        public static createGUI(destElem: HTMLDivElement, rows: number, columns: number) {
+        public static createGUI(destElem: HTMLDivElement) {
             destElem.innerHTML = "";
-            this.CURRENT_STATE.rows = rows;
-            this.CURRENT_STATE.columns = columns;
-    
+            this.getState().rows = 5;
+            this.getState().columns = 5;
+            this.getState().destinationDiv = destElem;
             this.createInputsMenu(destElem);
-            this.createArray(destElem, rows, columns);
-            this.CURRENT_STATE.cellsArray = this.getCreatedArray(destElem);
+            this.createArray(destElem, 5, 5);
+            this.getState().cellsArray = this.getCreatedArray(destElem);
             this.setupGUICallbacks(destElem);
         }
     
