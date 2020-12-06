@@ -62,9 +62,14 @@ export namespace Backtracking {
     export class StepByStepActions {
         public startPoint: Point;
         public finishPoint: Point;
-        public actions: Array<Action>;
-        public path: Array<Point>;
-        public generatedObstacles: Array<Point>;
+        public actions: Array<Action> = new Array();
+        public path: Array<Point> = new Array();
+        public generatedObstacles: Array<Point> = new Array();
+        
+        //Resolving state
+        public lastResolvedAction: Action | null;
+        public lastCheckingCellPoint: Point | null;
+        public currentlyEstablishedPath: Array<Point> = new Array();
     
         constructor(startPoint: Point, finishPoint: Point, actions: Array<Action>, generatedObstacles: Array<Point>, path: Array<Point>) {
             this.startPoint = startPoint;

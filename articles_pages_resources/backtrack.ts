@@ -149,7 +149,7 @@ export namespace Backtracking {
                     height: 100%;
                 }
             `;
-        };
+        }
     
         private static generateTableStyle(parentSizePx: number) {
             let height = parentSizePx / this.CURRENT_STATE.rows;
@@ -381,7 +381,7 @@ export namespace Backtracking {
             }
         }
 
-        public static onClearArrayButtonClicked(input: HTMLInputElement) {
+        public static onClearArrayButtonClicked() {
             this.getState().stepByStepActions = null;
             this.clearActionsText();
             this.recreateArrayFromState(true);
@@ -489,7 +489,142 @@ export namespace Backtracking {
             this.drawDestination(actions.finishPoint);
         }
 
-        public static applySolveAction(action: Action) {
+        public static onStepByStepResolveButtonClick() {
+            this.onClearArrayButtonClicked();
+            let stepByStepActions = BacktrackSolver.solve(
+                this.getSolverInputArray(), 
+                this.getState().lookupStrategy, 
+                false, 
+                this.getState().obstaclesSet.size() == 0 ? this.getState().randomObstaclesCount : null
+            );
+            this.getState().stepByStepActions = stepByStepActions;
+            for (let obstacle of stepByStepActions.generatedObstacles) {
+                this.drawObstacle(obstacle);
+            }
+            this.drawStart(stepByStepActions.startPoint);
+            this.drawDestination(stepByStepActions.finishPoint);
+        }
+
+        public static onNextStepButtonClick() {
+            let stepByStepActions = this.getState().stepByStepActions;
+            if (stepByStepActions == null) {
+                return;
+            }
+
+            let actionList = stepByStepActions.actions;
+            if (actionList.length == 0) {
+                return;
+            }
+
+            const currentAction = actionList.splice(0, 1)[0];
+
+            const lastResolvedAction = stepByStepActions.lastResolvedAction;
+            if (lastResolvedAction != null) {
+                let lastActionType = lastResolvedAction.type;
+                const consideredActions = [];
+                switch(lastActionType) {
+                    case ActionType.CELL_CHECK:
+                    case ActionType.BACKTRACK_CELL_CHECK: {
+                        this.removeStyle(lastResolvedAction.point);
+                        for (let pathPoint of stepByStepActions.currentlyEstablishedPath) {
+                            this.drawPath(pathPoint);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            const lastCheckingCellPoint = stepByStepActions.lastCheckingCellPoint;
+            if (lastCheckingCellPoint != null) {
+                let currentActionType = currentAction.type;
+                if (currentActionType == ActionType.CELL_BASE ||
+                    currentActionType == ActionType.FINISH_FOUND ||
+                    currentActionType == ActionType.BACKTRACK_START_FOUND ||
+                    currentActionType == ActionType.BACKTRACK_CELL_BASE
+                ) 
+                {
+                    this.removeStyle(lastCheckingCellPoint);
+                    stepByStepActions.lastCheckingCellPoint = null;
+                }
+            }
+            
+            const startPoint = stepByStepActions.startPoint;
+            if (!currentAction.point.equals(startPoint)) {
+                this.drawStart(startPoint);
+            }
+
+            const finishPoint = stepByStepActions.finishPoint;
+            if (!currentAction.point.equals(finishPoint)) {
+                this.drawDestination(finishPoint);
+            }
+
+            switch(currentAction.type) {
+                case ActionType.CELL_BASE:
+                case ActionType.BACKTRACK_CELL_BASE: {
+                    this.drawBaseCell(currentAction.point);
+                    stepByStepActions.lastCheckingCellPoint = currentAction.point;
+                    break;
+                }
+                case ActionType.CELL_CHECK:
+                case ActionType.BACKTRACK_CELL_CHECK: {
+                    this.drawCellCheck(currentAction.point);
+                    break;
+                }
+                case ActionType.DISTANCE_SET: {
+                    this.drawDistance(currentAction.point, currentAction.distance);
+                    break;
+                }
+                case ActionType.OBSTACLE_IGNORE: {
+                    this.drawObstacle(currentAction.point);
+                    break;
+                }
+                // case ActionType.VISITED_IGNORE:
+                // case ActionType.BACKTRACK_CELL_IGNORE: {
+                //     this.removeStyle(currentAction.point);
+                //     break;
+                // }
+                case ActionType.FINISH_FOUND:
+                case ActionType.BACKTRACK_CELL_CHOICE: {
+                    this.drawPath(currentAction.point)
+                    stepByStepActions.currentlyEstablishedPath.push(currentAction.point);
+                    break;
+                }
+                case ActionType.BACKTRACK_START_FOUND: {
+                    stepByStepActions.path.forEach((point) => {
+                        this.drawPath(point)
+                    });
+                    this.drawStart(startPoint);
+                    this.drawDestination(finishPoint);
+                    break;
+                }
+            }
+
+            for (let obstacle of stepByStepActions.generatedObstacles) {
+                this.drawObstacle(obstacle);
+            }
+
+            stepByStepActions.lastResolvedAction = currentAction;
+
+            //     let actionsOpt = _self.getState().stepByStepActionsOpt;
+            //     console.log(actionsOpt);
+            //     if (actionsOpt != null && actionsOpt.actions.length != 0) {
+            //         if (actionsOpt.resolved == false) {
+            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = _self.getTranslation("array.not_resolvable");
+            //             return;
+            //         }
+
+            //         let nextAction = actionsOpt.actions[0];
+            //         actionsOpt.actions.splice(0, 1);
+            //         switch(nextAction.type) {
+            //         }
+            //         if (nextAction.type == ActionType.BACKTRACK_START_FOUND) {
+            //             GUIHandler.displayPath(actionsOpt.path);
+            //         } else {
+            //             let actionTranslation = _self.getTranslation("actiontype." + ActionType[nextAction.type].toLowerCase());
+            //             let pointText = "X: " + nextAction.point.x + ", Y: " + nextAction.point.y;
+            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent =  actionTranslation + " ⇒ (" + pointText + ")";
+            //         }
+            //     }
         }
     
         public static setupGUICallbacks(destElem: HTMLDivElement) {
@@ -511,7 +646,7 @@ export namespace Backtracking {
 
             let clearArrayButton = document.getElementById(this.CLEAR_ARRAY_BUTTON_ID);
             clearArrayButton.onclick = function(ev) {
-                _self.onClearArrayButtonClicked(ev.target as HTMLInputElement);
+                _self.onClearArrayButtonClicked();
             };
 
             let sizeSlider = document.getElementById(this.SIZE_SLIDER_ID);
@@ -534,107 +669,15 @@ export namespace Backtracking {
                _self.onFastResolveButtonClick();
             };
 
-            // let stepByStepResolveButton = document.getElementById(this.STEP_BY_STEP_RESOLVE_BUTTON_ID);
-            // stepByStepResolveButton.onclick = function(ev) {
-            //     _self.recreateArrayFromState(destElem, false);
-            //     let presenter = new Presenter();
-            //     let actions = presenter.calculateAllSteps();
-            //     _self.getState().stepByStepActionsOpt = actions;
-            //     _self.setStart(actions.startPoint.x, actions.startPoint.y);
-            //     _self.drawStart(actions.startPoint.x, actions.startPoint.y)
-            //     _self.setDestination(actions.finishPoint.x, actions.finishPoint.y);
-            //     _self.drawDestination(actions.finishPoint.x, actions.finishPoint.y)
-            // };
+            let stepByStepResolveButton = document.getElementById(this.STEP_BY_STEP_RESOLVE_BUTTON_ID);
+            stepByStepResolveButton.onclick = function(ev) {
+                _self.onStepByStepResolveButtonClick();
+            };
 
-            
-
-            // let nextStepButton = document.getElementById(this.NEXT_STEP_BUTTON_ID);
-            // nextStepButton.onclick = function(ev) {
-            //     let actionsOpt = _self.getState().stepByStepActionsOpt;
-            //     console.log(actionsOpt);
-            //     if (actionsOpt != null && actionsOpt.actions.length != 0) {
-            //         if (actionsOpt.resolved == false) {
-            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent = _self.getTranslation("array.not_resolvable");
-            //             return;
-            //         }
-
-            //         let nextAction = actionsOpt.actions[0];
-            //         actionsOpt.actions.splice(0, 1);
-            //         switch(nextAction.type) {
-            //             case ActionType.CELL_BASE: {
-            //                 if (actionsOpt.previousBaseOpt != null) {
-            //                     _self.restoreStyle(actionsOpt.previousBaseOpt);
-            //                 }
-            //                 _self.drawBaseCell(nextAction.point);
-            //                 actionsOpt.previousBaseOpt = nextAction.point;
-            //                 break;
-            //             }
-            //             case ActionType.CELL_CHECK: {
-            //                 _self.drawCellCheck(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.FINISH_FOUND: {
-            //                 if (actionsOpt.previousBaseOpt != null) {
-            //                     _self.restoreStyle(actionsOpt.previousBaseOpt);
-            //                 }
-            //                 _self.drawDestination(nextAction.point.x, nextAction.point.y);
-            //                 break;
-            //             }
-            //             case ActionType.DISTANCE_SET: {
-            //                 _self.drawDistance(nextAction.point.x, nextAction.point.y, nextAction.distanceSetOpt);
-            //                 _self.restoreStyle(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.OBSTACLE_IGNORE: {
-            //                 _self.restoreStyle(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.VISITED_IGNORE: {
-            //                 _self.restoreStyle(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.BACKTRACK_START_FOUND: {
-            //                 _self.drawStart(nextAction.point.x, nextAction.point.y);
-            //                 if (actionsOpt.previousBaseOpt != null) {
-            //                     _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-            //                 }
-            //                 break;
-            //             }
-            //             case ActionType.BACKTRACK_CELL_BASE: {
-            //                 if (actionsOpt.previousBaseOpt != null) {
-            //                     if (actionsOpt.previousBaseOpt.equals(actionsOpt.finishPoint)) {
-            //                         _self.drawDestination(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-            //                     }
-            //                 }
-            //                 _self.drawBaseCell(nextAction.point);
-            //                 actionsOpt.previousBaseOpt = nextAction.point;
-            //                 break;
-            //             }
-            //             case ActionType.BACKTRACK_CELL_CHECK: {
-            //                 _self.drawCellCheck(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.BACKTRACK_CELL_IGNORE: {
-            //                 _self.restoreStyle(nextAction.point);
-            //                 break;
-            //             }
-            //             case ActionType.BACKTRACK_CELL_CHOICE: {
-            //                 if (actionsOpt.previousBaseOpt != null) {
-            //                     _self.drawPath(actionsOpt.previousBaseOpt.x, actionsOpt.previousBaseOpt.y);
-            //                 }
-            //                 _self.drawPath(nextAction.point.x, nextAction.point.y);
-            //                 break;
-            //             }
-            //         }
-            //         if (nextAction.type == ActionType.BACKTRACK_START_FOUND) {
-            //             GUIHandler.displayPath(actionsOpt.path);
-            //         } else {
-            //             let actionTranslation = _self.getTranslation("actiontype." + ActionType[nextAction.type].toLowerCase());
-            //             let pointText = "X: " + nextAction.point.x + ", Y: " + nextAction.point.y;
-            //             document.getElementById(_self.CURRENT_ACTION_TEXT).textContent =  actionTranslation + " ⇒ (" + pointText + ")";
-            //         }
-            //     }
-            // };
+            let nextStepButton = document.getElementById(this.NEXT_STEP_BUTTON_ID);
+            nextStepButton.onclick = function(ev) {
+                _self.onNextStepButtonClick();
+            };
 
             let cellsArray = this.getStateCells();
             for (var row = 0; row < cellsArray.getRowsCount(); row++) {
@@ -777,6 +820,11 @@ export namespace Backtracking {
             if (cell.htmlCell.hasAttribute("prev-style")) {
                 cell.htmlCell.setAttribute("style", cell.htmlCell.getAttribute("prev-style"));
             }
+        }
+
+        public static removeStyle(point: Point) {
+            let cell = this.getStateCells().get(point);
+            cell.htmlCell.removeAttribute("style");
         }
 
         public static unsetAll(point: Point): void {
