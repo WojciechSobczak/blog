@@ -1,0 +1,23 @@
+
+<script src="/blogapi/art_res/sorter.js"></script>
+<link rel="stylesheet" href="/blogapi/art_res/sorter.css">
+<div class="sorter-parent-container">
+    <div>
+        <h5>Wpisz elementy do posortowania, np: 1, 2, 3, 4</h5>
+    </div>
+    <div>
+        <input class="sorter-parent-container-input" type="text">
+    </div>
+    <div class="sorter-action-container">
+    </div>
+    <button class="sorter-parent-container-button">START</button>
+</div>
+
+<script>
+    const sortingVisualizer = new SortingVisualizer.SortingVisualizer(
+        document.querySelectorAll('.sorter-action-container')[0], 
+        document.querySelectorAll('.sorter-parent-container-input')[0],
+        document.querySelectorAll('.sorter-parent-container-button')[0],
+        "BUBBLE_SORT"
+    )
+</script>

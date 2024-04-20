@@ -1,0 +1,52 @@
+.sorter-parent-container {
+    margin: 5px;
+    padding: 10px;
+    box-shadow: 0 0 3px #ccc;
+    overflow: auto;
+}
+
+.sorter-action-container {
+    display: flex;
+    flex-direction: row;
+    width: fit-content;
+    justify-content: center;
+    margin-top: 0.4em;
+    margin-bottom: 0.4em;
+}
+
+.sorter-action-container > div {
+    margin: 0.1em;
+    background-color: #f0f0f0;
+    width: 3em;
+    height: 3em;
+    border-radius: 10%;
+    border-style: solid;
+    border-width: 2px;
+    border-color: rgb(218, 68, 83);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: center;
+}
+
+.sorter-action-container-div-compared {
+    background-color: #7dcbff !important
+}
+
+.sorter-action-container-div-compare-failed {
+    background-color: #ff8e8e !important
+}
+
+.sorter-action-container-div-compare-success {
+    background-color: #92ff71 !important
+}
+
+.sorter-action-container > div > p {
+    margin-top: auto;
+    margin-bottom: auto;
+}
+
+.sorter-parent-container-input {
+    width: 30%;
+}
