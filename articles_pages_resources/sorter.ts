@@ -125,11 +125,15 @@ export class SortingVisualizer {
 
     #enableStartDisableStop() {
         if (this.stopCurrentSort == true) {
-            this.stopCurrentSort = false
-            this.startButtonElement.disabled = false
+            this.#enableNextSort()
             return true;
         }
         return false;
+    }
+
+    #enableNextSort() {
+        this.stopCurrentSort = false
+        this.startButtonElement.disabled = false
     }
 
     #bubbleSortAnimationStart() {
@@ -149,7 +153,7 @@ export class SortingVisualizer {
                 })
             }
             else if (currentAction instanceof FinishAction) {
-                if (this.#enableStartDisableStop()) return;
+                this.#enableNextSort();
             }
         };
         resolveAction();
