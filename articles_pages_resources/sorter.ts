@@ -4,7 +4,8 @@ namespace SortingVisualizer
 {
 
 enum Algorithm {
-    BUBBLE_SORT = "BUBBLE_SORT"
+    BUBBLE_SORT = "BUBBLE_SORT",
+    INSERTION_SORT = "INSERTION_SORT"
 }
 
 class CompareAction {
@@ -98,8 +99,9 @@ export class SortingVisualizer {
 
     #startSorting() {
         switch (this.algorithm) {
-            case Algorithm.BUBBLE_SORT: {
-                this.#bubbleSortAnimationStart();
+            case Algorithm.BUBBLE_SORT:
+            case Algorithm.INSERTION_SORT: {
+                this.#bubbleSortInsertionSortAnimationStart(this.algorithm);
                 break;
             }
             default:
@@ -123,6 +125,23 @@ export class SortingVisualizer {
         yield new FinishAction();
     }
 
+    *#insertionSort() {
+        for (let iteration = 1; iteration < this.collectionToSort.length; iteration++) {
+            for (let index = iteration; index > 0; index--) {
+                const isGreater = this.collectionToSort[index] > this.collectionToSort[index - 1]
+                yield new CompareAction(index, index - 1, !isGreater);
+                if (!isGreater) {
+                    break;
+                }
+                const temp = this.collectionToSort[index]
+                this.collectionToSort[index] = this.collectionToSort[index - 1]
+                this.collectionToSort[index - 1] = temp
+                yield new SwapAction(index, index - 1);
+            }
+        }
+        yield new FinishAction();
+    }
+
     #enableStartDisableStop() {
         if (this.stopCurrentSort == true) {
             this.#enableNextSort()
@@ -136,8 +155,15 @@ export class SortingVisualizer {
         this.startButtonElement.disabled = false
     }
 
-    #bubbleSortAnimationStart() {
-        var generator = this.#bubbleSort();
+    #bubbleSortInsertionSortAnimationStart(algorithm: Algorithm) {
+        var generator = (() => {
+            switch (algorithm) {
+                case Algorithm.BUBBLE_SORT: return this.#bubbleSort();
+                case Algorithm.INSERTION_SORT: return this.#insertionSort();
+                default: throw "NOT IMPLEMENTED"
+            }
+        })();
+        
         const resolveAction = () => {
             if (this.#enableStartDisableStop()) return;
             
