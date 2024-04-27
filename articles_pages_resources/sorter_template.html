@@ -10,14 +10,16 @@
     </div>
     <div class="sorter-action-container">
     </div>
-    <button class="sorter-parent-container-button">START</button>
+    <button class="sorter-parent-container-start-button">START</button>
+    <button class="sorter-parent-container-stop-button">STOP</button>
 </div>
 
 <script>
     const sortingVisualizer = new SortingVisualizer.SortingVisualizer(
         document.querySelectorAll('.sorter-action-container')[0], 
         document.querySelectorAll('.sorter-parent-container-input')[0],
-        document.querySelectorAll('.sorter-parent-container-button')[0],
+        document.querySelectorAll('.sorter-parent-container-start-button')[0],
+        document.querySelectorAll('.sorter-parent-container-stop-button')[0],
         "BUBBLE_SORT"
     )
 </script>

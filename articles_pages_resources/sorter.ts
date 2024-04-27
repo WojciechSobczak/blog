@@ -1,3 +1,5 @@
+declare var toastr: any;
+
 namespace SortingVisualizer 
 {
 
@@ -38,16 +40,18 @@ export class SortingVisualizer {
 
     private sorterActionContainer: HTMLDivElement = null
     private startButtonElement: HTMLButtonElement = null
+    private stopButtonElement: HTMLButtonElement = null
     private inputElement: HTMLInputElement = null
     private algorithm: Algorithm = Algorithm.BUBBLE_SORT
-    private collectionToSort: Array<number> = [5, 4, 6, 1, 3, 2]
+    private collectionToSort: Array<number> = [7, 5, 4, 6, 1, 3, 2]
 
-    private stopSorting: boolean = false
+    private stopCurrentSort: boolean = false;
 
     constructor(
         sorterActionContainer: HTMLDivElement,
         inputElement: HTMLInputElement,
         startButtonElement: HTMLButtonElement,
+        stopButtonElement: HTMLButtonElement,
         algorithm: Algorithm
     ) {
         this.sorterActionContainer = sorterActionContainer;
@@ -57,12 +61,39 @@ export class SortingVisualizer {
             .replaceAll(',', ', ');
 
         this.startButtonElement = startButtonElement;
+        this.stopButtonElement = stopButtonElement;
         this.algorithm = algorithm
 
         this.startButtonElement.onclick = () => {
+            try {
+                this.collectionToSort = this.#parseUserInput();
+            } catch (error) {
+                toastr.error("Niepoprawny format wejścia.")
+                return
+            }
+            this.startButtonElement.disabled = true
+            this.#recreateSortingTable()
             this.#startSorting();
         };
+
+        this.stopButtonElement.onclick = () => {
+            this.stopCurrentSort = true
+            this.#recreateSortingTable()
+        };
+
         this.#recreateSortingTable()
+
+    }
+
+    #parseUserInput(): Array<number> {
+        let userInput = this.inputElement.value;
+        userInput = JSON.parse(`[${userInput}]`);
+        for (const elem of userInput) {
+            if (!Number.isFinite(elem)) {
+                throw "Not a sortable number"
+            }
+        }
+        return userInput as unknown as Array<number>;
     }
 
     #startSorting() {
@@ -74,19 +105,11 @@ export class SortingVisualizer {
             default:
                 throw "NOT IMPLEMENTED"
         }
-
-        // let leftIndex = 0;
-        // let rightIndex = 0;
-        // while (rightIndex == leftIndex) {
-        //     rightIndex = this.#getRandomInt(0, 6)
-        //     leftIndex = this.#getRandomInt(0, 6)
-        // }
-        // this.#swapElements(leftIndex, rightIndex)
     }
 
     *#bubbleSort() {
         for (let iteration = 0; iteration < this.collectionToSort.length - 1; iteration++) {
-            for (let index = 0; index < this.collectionToSort.length - 1; index++) {
+            for (let index = 0; index < this.collectionToSort.length - iteration - 1; index++) {
                 const isGreater = this.collectionToSort[index] > this.collectionToSort[index + 1]
                 yield new CompareAction(index, index + 1, !isGreater);
                 if (isGreater) {
@@ -100,10 +123,21 @@ export class SortingVisualizer {
         yield new FinishAction();
     }
 
-    #bubbleSortAnimationStart(reset: boolean = false) {
+    #enableStartDisableStop() {
+        if (this.stopCurrentSort == true) {
+            this.stopCurrentSort = false
+            this.startButtonElement.disabled = false
+            return true;
+        }
+        return false;
+    }
+
+    #bubbleSortAnimationStart() {
         var generator = this.#bubbleSort();
-        var resolveAction = () => {
-            let currentAction = generator.next().value
+        const resolveAction = () => {
+            if (this.#enableStartDisableStop()) return;
+            
+            const currentAction = generator.next().value
             if (currentAction instanceof CompareAction) {
                 this.#resolveComparison(currentAction, () => {
                     resolveAction();
@@ -115,7 +149,7 @@ export class SortingVisualizer {
                 })
             }
             else if (currentAction instanceof FinishAction) {
-               return
+                if (this.#enableStartDisableStop()) return;
             }
         };
         resolveAction();
