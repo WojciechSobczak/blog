@@ -5,5 +5,8 @@
   "devDependencies": {
     "@types/node": "20.0.0",
     "typescript": "5.4.4"
+  },
+  "dependencies": {
+    "uglify-js": "^3.17.4"
   }
 }
