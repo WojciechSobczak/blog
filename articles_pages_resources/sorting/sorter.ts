@@ -128,7 +128,7 @@ export class SortingVisualizer {
     *#insertionSort() {
         for (let iteration = 1; iteration < this.collectionToSort.length; iteration++) {
             for (let index = iteration; index > 0; index--) {
-                const isGreater = this.collectionToSort[index] > this.collectionToSort[index - 1]
+                const isGreater = this.collectionToSort[index] < this.collectionToSort[index - 1]
                 yield new CompareAction(index, index - 1, !isGreater);
                 if (!isGreater) {
                     break;
