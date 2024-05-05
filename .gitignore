@@ -7,3 +7,9 @@
 articles_pages_resources/node_modules
 articles_pages_resources/package-lock.json
 .vscode
+.vs
+.idea
+cpp/build
+cpp/.idea
+cpp/.conan
+*.pyc
